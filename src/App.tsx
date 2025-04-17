@@ -2,12 +2,11 @@ import "./App.css";
 import ToDoList from "./components/toDoList";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { useState } from "react";
-import { TodosContext } from "./contexts/todoContext";
-import { DeleteModalContext } from "./contexts/isDeletedContext";
-import { openDeletedModal } from "./contexts/openDeletedModal";
-import { OpenEditModal } from "./contexts/openEditModal";
-import { ShowFieldAction } from "./contexts/showFieldAction";
 import { useEffect } from "react";
+import { CurrentTodo } from "./contexts/currentTodo";
+import SnackbarProvider from "./contextProviders/snackbarProvider";
+import TodoReducerProvider from "./contextProviders/todoReducerProvider";
+import { useTodo } from "./contextProviders/todoReducerProvider";
 
 const theme = createTheme({
   typography: {
@@ -35,20 +34,22 @@ function App() {
   // Vars
   // ============= Vars============
   // States
-  const [todosDataState, setTodosData] = useState<todosInterface[]>([]);
-  const [isDeleted, setIsDeleted] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [showFieldAction, setShowFieldAction] = useState(false); // Error visibility state for field
+  const [currentTodo, setCurrentTodo] = useState<todosInterface>({
+    id: "",
+    title: "",
+    content: "",
+    isCompleted: false,
+  });
   // ======= State ===========
+
+  // Custom Hooks
+  const { todoDispatch } = useTodo();
+  // ============= Custom Hooks =============
 
   // Use Effect
   useEffect(() => {
-    const todosFromLocalStorage = JSON.parse(
-      localStorage.getItem("Todos") || "[]"
-    );
-    setTodosData(todosFromLocalStorage);
-    console.log(todosDataState);
+    console.log("Hi");
+    todoDispatch({ type: "get" });
   }, []);
 
   // ========= Use Effect ==========
@@ -61,21 +62,15 @@ function App() {
           backgroundColor: "#F7F7F7",
         }}
       >
-        <TodosContext.Provider value={{ todosDataState, setTodosData }}>
-          <DeleteModalContext.Provider value={{ isDeleted, setIsDeleted }}>
-            <openDeletedModal.Provider value={{ isModalOpen, setIsModalOpen }}>
-              <OpenEditModal.Provider
-                value={{ isEditModalOpen, setIsEditModalOpen }}
-              >
-                <ShowFieldAction.Provider
-                  value={{ showFieldAction, setShowFieldAction }}
-                >
-                  <ToDoList></ToDoList>
-                </ShowFieldAction.Provider>
-              </OpenEditModal.Provider>
-            </openDeletedModal.Provider>
-          </DeleteModalContext.Provider>
-        </TodosContext.Provider>
+        <TodoReducerProvider>
+          <CurrentTodo.Provider value={{ currentTodo, setCurrentTodo }}>
+            <SnackbarProvider>
+              {/* Todo List */}
+              <ToDoList />
+              {/* ====== Todo List ======= */}
+            </SnackbarProvider>
+          </CurrentTodo.Provider>
+        </TodoReducerProvider>
       </div>
     </ThemeProvider>
   );

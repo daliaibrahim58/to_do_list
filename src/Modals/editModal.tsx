@@ -1,39 +1,59 @@
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import { TodosContext } from "../contexts/todoContext";
 import { useContext } from "react";
 import { useState } from "react";
 import { OpenEditModal } from "../contexts/openEditModal";
-
+import FieldActionEdit from "../Actions/fieldActionsEdit";
+import { useEffect } from "react";
+import { SnackbarContext } from "../contexts/snackbarContext";
+import { useTodo } from "../contextProviders/todoReducerProvider";
+import { CurrentTodo } from "../contexts/currentTodo";
 // Interfaces
-interface editModalInterface {
-  id: string;
-}
 // =========== Interfaces ===========
 
-function EditModal({ id }: editModalInterface) {
+function EditModal() {
   // Use Context
-  const { todosDataState, setTodosData } = useContext(TodosContext);
   const { setIsEditModalOpen } = useContext(OpenEditModal);
+  const { setSnackbarMessage, setIsSnackbarOpen } = useContext(SnackbarContext);
+  const { currentTodo } = useContext(CurrentTodo);
   // ======== Use Context ==============
 
   // Vars
   // ====== Vars =======
 
+  // Custom Hooks
+  const { todoDispatch } = useTodo();
+  // ========= Custom Hooks ==========
+
   // Use States
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [showFieldAction, setShowFieldAction] = useState(false);
   // ======= Use States ==========
+
+  // Use Effect
+  useEffect(() => {
+    setShowFieldAction(false);
+  }, [title, content]);
+  // ===== Use Effect ======
 
   // Functions
   const handleEdition = () => {
-    const updatedTodos = todosDataState.map((todo) =>
-      todo.id === id ? { ...todo, title, content } : todo
-    );
-
-    setTodosData(updatedTodos);
-    localStorage.setItem("Todos", JSON.stringify(updatedTodos));
-    setIsEditModalOpen(false);
+    if (title.trim() !== "" && content.trim() !== "") {
+      todoDispatch({
+        type: "edited",
+        payload: {
+          currentTodo,
+          title,
+          content,
+        },
+      });
+      setIsEditModalOpen(false);
+      setSnackbarMessage("تم تحديث المهمة بنجاح");
+      setIsSnackbarOpen(true);
+    } else {
+      setShowFieldAction(true);
+    }
   };
   // ======== Functions ===========
 
@@ -52,6 +72,7 @@ function EditModal({ id }: editModalInterface) {
           alignItems: "center",
           zIndex: 10000,
         }}
+        onClick={() => setIsEditModalOpen(false)}
       >
         <div
           style={{
@@ -60,6 +81,7 @@ function EditModal({ id }: editModalInterface) {
             borderRadius: "20px",
             width: "35%",
           }}
+          onClick={(e) => e.stopPropagation()} // prevent click inside modal from closing
         >
           <h1>تعديل المهمة</h1>
           <TextField
@@ -86,6 +108,9 @@ function EditModal({ id }: editModalInterface) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+          {/*Field Action */}
+          <FieldActionEdit display={showFieldAction} />
+          {/*==== Field Action ======= */}
           <TextField
             id="outlined-basic"
             label="التفاصيل"
@@ -109,6 +134,9 @@ function EditModal({ id }: editModalInterface) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
+          {/*Field Action */}
+          <FieldActionEdit display={showFieldAction} />
+          {/*==== Field Action ======= */}
           <Button
             variant="text"
             style={{

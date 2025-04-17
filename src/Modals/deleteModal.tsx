@@ -1,32 +1,31 @@
 import Button from "@mui/material/Button";
 import { useContext } from "react";
-import { DeleteModalContext } from "../contexts/isDeletedContext";
-import { TodosContext } from "../contexts/todoContext";
 import { openDeletedModal } from "../contexts/openDeletedModal";
+import { CurrentTodo } from "../contexts/currentTodo";
+import { SnackbarContext } from "../contexts/snackbarContext";
+import { useTodo } from "../contextProviders/todoReducerProvider";
 
-interface deleteModalPropsInterface {
-  id: string;
-}
-
-function DeleteModal({ id }: deleteModalPropsInterface) {
+function DeleteModal() {
   // Use States
 
   // =========== Use States =============
 
   // Use Context
-  const { isDeleted, setIsDeleted } = useContext(DeleteModalContext);
-  const { todosDataState, setTodosData } = useContext(TodosContext);
   const { setIsModalOpen } = useContext(openDeletedModal);
+  const { currentTodo } = useContext(CurrentTodo);
+  const { setSnackbarMessage, setIsSnackbarOpen } = useContext(SnackbarContext);
   // =========== Use Context ============
+
+  // Custom Hooks
+  const { todoDispatch } = useTodo();
+  // ========= Custom Hooks ==========
 
   // Functions
   const handleDeletion = () => {
-    setIsDeleted(true);
-    if (isDeleted) {
-      const newTodos = todosDataState.filter((todo) => todo.id !== id);
-      setTodosData(newTodos);
-      localStorage.setItem("Todos", JSON.stringify(newTodos));
-    }
+    todoDispatch({ type: "deleted", payload: {currentTodo} });
+    setIsModalOpen(false);
+    setSnackbarMessage("تم حذف المهمة بنجاح");
+    setIsSnackbarOpen(true);
   };
   // =========== Functions ===========
 
@@ -53,6 +52,7 @@ function DeleteModal({ id }: deleteModalPropsInterface) {
             padding: "20px",
             borderRadius: "20px",
           }}
+          onClick={(e) => e.stopPropagation()} // prevent click inside modal from closing
         >
           <h2>هل انت متاكد من رغبتك في حذف المهمه؟</h2>
           <p

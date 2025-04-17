@@ -15,45 +15,67 @@ import { Theme } from "@mui/material";
 import { useState } from "react";
 import FieldAction from "../Actions/fieldActions";
 import { useContext } from "react";
-import { TodosContext } from "../contexts/todoContext";
-import { ShowFieldAction } from "../contexts/showFieldAction";
+import { useMemo } from "react";
+import { openDeletedModal } from "../contexts/openDeletedModal";
+import { OpenEditModal } from "../contexts/openEditModal";
+import DeleteModal from "../Modals/deleteModal";
+import EditModal from "../Modals/editModal";
+import { useEffect } from "react";
+import SimpleSnackbar from "../snackbars/snackbar";
+import { SnackbarContext } from "../contexts/snackbarContext";
+import { useTodo } from "../contextProviders/todoReducerProvider";
+import { todosInterface } from "../Types/todoActionType";
 
-// Others
-import { v4 as uuidv4 } from "uuid";
-
-// Vars
-interface todosInterface {
-  id: string;
-  title: string;
-  content: string;
-  isCompleted: boolean;
-}
+// Interfaces
+// ======= Interfaces ======
 
 function ToDoList() {
   // Use Context
-  const { todosDataState, setTodosData } = useContext(TodosContext);
-  const { showFieldAction, setShowFieldAction } = useContext(ShowFieldAction);
+  const {
+    isSnackbarOpen,
+    setIsSnackbarOpen,
+    snackbarMessage,
+    setSnackbarMessage,
+  } = useContext(SnackbarContext);
   // =========== Use Context ============
+
   // States
   const [inputText, setInputText] = useState("");
   const [toggleBtnVal, setToggleBtnVal] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showFieldAction, setShowFieldAction] = useState(false); // Error visibility state for field
   // ========= States ============
 
+  // Custom Hooks
+  const { currentState, todoDispatch } = useTodo(); // ✅ Add ()
+  // ======== custom Hooks ========
+
+  // Use Effect
+  useEffect(() => {
+    setShowFieldAction(false);
+  }, [inputText]);
+  // ===== Use Effect ======
+
   // Vars
-  let renderedTodo = todosDataState;
+  let renderedTodo = currentState;
   // ===== Vars ======
 
   // Todos Will Render
-  const completed = todosDataState.filter((todo) => {
-    return todo.isCompleted;
-  });
+  const completed = useMemo(() => {
+    return currentState.filter((todo: todosInterface) => {
+      return todo.isCompleted;
+    });
+  }, [currentState]);
 
-  const notCompleted = todosDataState.filter((todo) => {
-    return !todo.isCompleted;
-  });
+  const notCompleted = useMemo(() => {
+    return currentState.filter((todo: todosInterface) => {
+      return !todo.isCompleted;
+    });
+  }, [currentState]);
 
   // If Conditions
-  if (toggleBtnVal == "all") renderedTodo = todosDataState;
+  if (toggleBtnVal == "all") renderedTodo = currentState;
   else if (toggleBtnVal == "completed") renderedTodo = completed;
   else if (toggleBtnVal == "not_completed") renderedTodo = notCompleted;
   // ========== If Conditions ==========
@@ -62,29 +84,18 @@ function ToDoList() {
 
   // TODo UI
   const todosUI = renderedTodo.map((todoData: todosInterface) => (
-    <ToDo
-      key={todoData.id}
-      id={todoData.id}
-      title={todoData.title}
-      content={todoData.content}
-    />
+    <ToDo key={todoData.id} todo={todoData} />
   ));
   // ====== TDO UI
 
   // Functions
   const handleAddTodo = function () {
     if (inputText !== "") {
-      const newTodo: todosInterface = {
-        id: uuidv4(),
-        title: inputText,
-        content: "",
-        isCompleted: false,
-      };
-      const updatedTodo = [...todosDataState, newTodo];
-      setTodosData(updatedTodo);
-      localStorage.setItem("Todos", JSON.stringify(updatedTodo));
+      todoDispatch({ type: "added", payload: { inputText } });
       setInputText("");
       setShowFieldAction(false);
+      setSnackbarMessage("تمت الاضافة بنجاح");
+      setIsSnackbarOpen(true);
     } else {
       setShowFieldAction(true);
     }
@@ -178,9 +189,27 @@ function ToDoList() {
             {/*========Text Field Area======= */}
           </div>
 
-          {/*To_Do_Component */}
-          <Stack spacing={2}>{todosUI}</Stack>
-          {/*=========To_Do_Component======== */}
+          {/* UI */}
+          <openDeletedModal.Provider value={{ isModalOpen, setIsModalOpen }}>
+            <OpenEditModal.Provider
+              value={{ isEditModalOpen, setIsEditModalOpen }}
+            >
+              {/*To_Do_Component */}
+              <Stack spacing={2}>{todosUI}</Stack>
+              {/*=========To_Do_Component======== */}
+
+              {/* Modals */}
+              {isModalOpen && <DeleteModal />}
+              {isEditModalOpen && <EditModal />}
+              {/* ======Modals====== */}
+
+              {/* Snackbars */}
+
+              {isSnackbarOpen && <SimpleSnackbar content={snackbarMessage} />}
+              {/* ======Snackbars====== */}
+            </OpenEditModal.Provider>
+          </openDeletedModal.Provider>
+          {/* ==== UI ==== */}
         </CardContent>
       </Card>
     </Container>

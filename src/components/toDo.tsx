@@ -8,50 +8,58 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useTheme } from "@emotion/react";
 import { Theme } from "@mui/material";
 import { useContext } from "react";
-import { TodosContext } from "../contexts/todoContext";
 import { openDeletedModal } from "../contexts/openDeletedModal";
-import DeleteModal from "../Modals/deleteModal";
 import { OpenEditModal } from "../contexts/openEditModal";
-import EditModal from "../Modals/editModal";
+import { CurrentTodo } from "../contexts/currentTodo";
+import { SnackbarContext } from "../contexts/snackbarContext";
+import { useTodo } from "../contextProviders/todoReducerProvider";
+import { todosInterface } from "../Types/todoActionType";
 
-// Vars
-interface ToDoProps {
-  id: string;
-  title: string;
-  content: string;
+// Interfaces
+interface todoObj {
+  todo: todosInterface;
 }
 
-export default function ToDo({ id, title, content }: ToDoProps) {
+export default function ToDo({ todo }: todoObj) {
   const theme = useTheme() as Theme;
 
+  // Custom Hooks
+  const { todoDispatch } = useTodo();
+  // ====== Custom Hooks ======
+
   // Use Context
-  const { todosDataState, setTodosData } = useContext(TodosContext);
-  const { isModalOpen, setIsModalOpen } = useContext(openDeletedModal);
-  const { isEditModalOpen, setIsEditModalOpen } = useContext(OpenEditModal);
+  const { setIsModalOpen } = useContext(openDeletedModal);
+  const { setIsEditModalOpen } = useContext(OpenEditModal);
+  const { setCurrentTodo } = useContext(CurrentTodo);
+  const { setSnackbarMessage, setIsSnackbarOpen } = useContext(SnackbarContext);
   // =========== Use Context ============
 
   // Functions
-  const currentTodo = todosDataState.find((todo) => todo.id === id); // Use find() instead of filter()
-
   const handleCompleteCheck = () => {
-    const newTodos = todosDataState.map((todo) =>
-      todo.id === id ? { ...todo, isCompleted: !todo.isCompleted } : todo
-    );
+    const wasCompleted = todo.isCompleted; // ✅ was accessing `e.target.value.isCompleted` incorrectly
+    todoDispatch({ type: "completed", payload: { currentTodo: todo } });
 
-    setTodosData(newTodos);
-    localStorage.setItem("Todos", JSON.stringify(newTodos));
+    // Snackbar
+    setIsSnackbarOpen(false);
+    setTimeout(() => {
+      setSnackbarMessage(
+        !wasCompleted
+          ? "تمت الإضافة الي المهام المنجزة بنجاح"
+          : "تمت الازالة من المهام المنجزة"
+      );
+      setIsSnackbarOpen(true);
+    }, 100);
   };
 
   const handleDeleteCheck = () => {
     setIsModalOpen(true);
-    console.log(isModalOpen); // Debug
+    setCurrentTodo(todo);
   };
 
   const handleEditCheck = () => {
     setIsEditModalOpen(true);
-    console.log(isEditModalOpen); // Debug
+    setCurrentTodo(todo);
   };
-  // ============= Functions ==============
 
   return (
     <>
@@ -74,14 +82,12 @@ export default function ToDo({ id, title, content }: ToDoProps) {
                   style={{
                     padding: "0px",
                     margin: "0px",
-                    textDecoration: currentTodo?.isCompleted
-                      ? "line-through"
-                      : "none",
+                    textDecoration: todo.isCompleted ? "line-through" : "none",
                   }}
                 >
-                  {title}
+                  {todo.title}
                 </p>
-                <p style={{ padding: "0px", margin: "0px" }}>{content}</p>
+                <p style={{ padding: "0px", margin: "0px" }}>{todo.content}</p>
               </Typography>
             </Grid>
             <Grid
@@ -95,12 +101,10 @@ export default function ToDo({ id, title, content }: ToDoProps) {
               <DoneIcon
                 className="icon"
                 style={{
-                  backgroundColor: currentTodo?.isCompleted
-                    ? "#4CAF50"
-                    : "#fff",
+                  backgroundColor: todo.isCompleted ? "#4CAF50" : "#fff",
                   padding: "7px",
                   borderRadius: "20px",
-                  color: currentTodo?.isCompleted ? "#fff" : "#4CAF50",
+                  color: todo.isCompleted ? "#fff" : "#4CAF50",
                 }}
                 onClick={() => handleCompleteCheck()}
               />
@@ -130,10 +134,6 @@ export default function ToDo({ id, title, content }: ToDoProps) {
           </Grid>
         </CardContent>
       </Card>
-
-      {/* ✅ Now DeleteModal will actually appear when `isModalOpen` is true */}
-      {isModalOpen && <DeleteModal id={id} />}
-      {isEditModalOpen && <EditModal id={id} />}
     </>
   );
 }
